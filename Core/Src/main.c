@@ -50,7 +50,7 @@
 uint32_t i_text = 5;
 bool view_flag = 0;
 
-//pwm占空比
+// pwm占空比
 uint8_t pa6_duty = 10;
 uint8_t pa7_duty = 10;
 
@@ -64,13 +64,12 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-//  1) B1:定义为“界面切换”按键，切换 LCD 显示“数据界面”和参数界面。
-// 2) B2:每次按下 B2 按键，PA6 手动模式占空比参数加 10%，占空比可调整范围
-// 10% - 90%，占空比参数增加到 90%后，再次按下 B2 按键，返回 10%。
-// 3) B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
-// 10% - 90%，占空比参数增加到 90%后，再次按下 B3 按键，返回 10%。
-
+// 按键 B2、B3 仅在参数显示界面有效。
+//   1) B1:定义为“界面切换”按键，切换 LCD 显示“数据界面”和参数界面。
+//  2) B2:每次按下 B2 按键，PA6 手动模式占空比参数加 10%，占空比可调整范围
+//  10% - 90%，占空比参数增加到 90%后，再次按下 B2 按键，返回 10%。
+//  3) B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
+//  10% - 90%，占空比参数增加到 90%后，再次按下 B3 按键，返回 10%。
 
 // key0切换菜单
 void key_process()
@@ -81,32 +80,41 @@ void key_process()
     view_flag = !view_flag;
     key[0].sigle_flag = 0;
   }
-  // key1增加pa6占空比
-  if (key[1].sigle_flag == 1)
-  {
-    if (pa6_duty < 90)
+
+  if (view_flag == 1)
+  { // key1增加pa6占空比
+    if (key[1].sigle_flag == 1)
     {
-      pa6_duty += 10;
+      if (pa6_duty < 90)
+      {
+        pa6_duty += 10;
+      }
+      else
+      {
+        pa6_duty = 10;
+      }
+      __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
+      key[1].sigle_flag = 0;
     }
-    else
+    // B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
+    if (key[2].sigle_flag == 1)
     {
-      pa6_duty = 10;
+      if (pa7_duty < 90)
+      {
+        pa7_duty += 10;
+      }
+      else
+      {
+        pa7_duty = 10;
+      }
+      __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
+      key[2].sigle_flag = 0;
     }
-    __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
-    key[1].sigle_flag = 0;
   }
-  // B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
-  if (key[2].sigle_flag == 1)
+  else
   {
-    if (pa7_duty < 90)
-    {
-      pa7_duty += 10;
-    }
-    else
-    {
-      pa7_duty = 10;
-    }
-    __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
+    // 避免在其他界面按键被误触发
+    key[1].sigle_flag = 0;
     key[2].sigle_flag = 0;
   }
 }
@@ -142,9 +150,9 @@ void disp_process()
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -250,21 +258,21 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -280,9 +288,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -299,9 +306,9 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -313,14 +320,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
