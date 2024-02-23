@@ -26,6 +26,7 @@
 #include "led.h"
 #include "lcd.h"
 #include "stdio.h"
+#include "interrupt.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,7 +47,13 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t i_text = 0;
+uint32_t i_text = 5;
+bool view_flag = 0;
+
+//pwm占空比
+uint8_t pa6_duty = 10;
+uint8_t pa7_duty = 10;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +64,80 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+//  1) B1:定义为“界面切换”按键，切换 LCD 显示“数据界面”和参数界面。
+// 2) B2:每次按下 B2 按键，PA6 手动模式占空比参数加 10%，占空比可调整范围
+// 10% - 90%，占空比参数增加到 90%后，再次按下 B2 按键，返回 10%。
+// 3) B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
+// 10% - 90%，占空比参数增加到 90%后，再次按下 B3 按键，返回 10%。
+
+
+// key0切换菜单
+void key_process()
+{
+  // key0切换菜单
+  if (key[0].sigle_flag == 1)
+  {
+    view_flag = !view_flag;
+    key[0].sigle_flag = 0;
+  }
+  // key1增加pa6占空比
+  if (key[1].sigle_flag == 1)
+  {
+    if (pa6_duty < 90)
+    {
+      pa6_duty += 10;
+    }
+    else
+    {
+      pa6_duty = 10;
+    }
+    __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
+    key[1].sigle_flag = 0;
+  }
+  // B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
+  if (key[2].sigle_flag == 1)
+  {
+    if (pa7_duty < 90)
+    {
+      pa7_duty += 10;
+    }
+    else
+    {
+      pa7_duty = 10;
+    }
+    __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
+    key[2].sigle_flag = 0;
+  }
+}
+
+void disp_process()
+{
+  static int last_view_flag = -1; // 初始化为一个不可能的值
+  if (last_view_flag != view_flag)
+  {
+    LCD_Clear(Black); // 清屏
+    last_view_flag = view_flag;
+  }
+  if (view_flag == 0)
+  {
+
+    char text[30];
+    sprintf(text, "       Data    ");
+    LCD_DisplayStringLine(Line0, (uint8_t *)text);
+  }
+  else if (view_flag == 1)
+  {
+
+    char text[30];
+    sprintf(text, "       Para    ");
+    LCD_DisplayStringLine(Line0, (uint8_t *)text);
+    sprintf(text, "    PA6:%d%%    ", pa6_duty);
+    LCD_DisplayStringLine(Line2, (uint8_t *)text);
+    sprintf(text, "    PA7:%d%%    ", pa7_duty);
+    LCD_DisplayStringLine(Line4, (uint8_t *)text);
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -89,18 +170,22 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM3_Init();
+  MX_TIM16_Init();
+  MX_TIM17_Init();
   /* USER CODE BEGIN 2 */
   led_disp(0x00); // led初始化
   LCD_Init();     // lcd屏幕初始化
 
- // 清除LCD屏幕上的内容
+  // 清除LCD屏幕上的内容
   LCD_Clear(Black);
   // 设置LCD屏幕上的背景颜色
   LCD_SetBackColor(Black);
   // 设置LCD屏幕上的文字颜色
   LCD_SetTextColor(White);
 
-
+  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim17, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -111,12 +196,46 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    int8_t text[30];
 
-    sprintf(text, "   CNBR:%d    ", i_text);
-    LCD_DisplayStringLine(Line9, text);
-    i_text++;
-    HAL_Delay(1000);
+    key_process();
+    disp_process();
+    // int8_t text[30];
+
+    // sprintf(text, "   CNBR:%d    ", i_text);
+    // LCD_DisplayStringLine(Line9, text);
+
+    // if (key[0].sigle_flag == 1)
+    // {
+    //   sprintf(text, "   KEY0 DOWN    ");
+    //   LCD_DisplayStringLine(Line8, text);
+    //   key[0].sigle_flag = 0;
+    // }
+    // if (key[0].long_flag == 1)
+    // {
+    //   sprintf(text, "   KEY0 LONG    ");
+    //   LCD_DisplayStringLine(Line8, text);
+    //   key[0].long_flag = 0;
+    // }
+
+    // if (key[1].sigle_flag == 1)
+    // {
+    //   sprintf(text, "   KEY1 DOWN    ");
+    //   LCD_DisplayStringLine(Line8, text);
+    //   key[1].sigle_flag = 0;
+    // }
+    // if (key[2].sigle_flag == 1)
+    // {
+    //   sprintf(text, "   KEY2 DOWN    ");
+    //   LCD_DisplayStringLine(Line8, text);
+    //   key[2].sigle_flag = 0;
+    // }
+    // if (key[3].sigle_flag == 1)
+    // {
+    //   sprintf(text, "   KEY3 DOWN    ");
+    //   LCD_DisplayStringLine(Line8, text);
+    //   key[3].sigle_flag = 0;
+    // }
+
     //   uint8_t led_values[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     //   // 遍历led_values数组，将每一个值传入led_disp函数，每次循环延迟500ms
     //   for (int i = 0; i < 8; i++)
@@ -126,7 +245,7 @@ int main(void)
     //     led_disp(0x00);
     //     HAL_Delay(500);
     //   }
-     }
+  }
   /* USER CODE END 3 */
 }
 
