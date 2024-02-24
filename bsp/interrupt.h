@@ -34,8 +34,12 @@ struct keys
 
 struct pwm_capture
 {
+    uint32_t high_val;
     uint32_t ccr1_val;
     uint32_t frq;
+    float duty;
+    
+    
 };
 
 

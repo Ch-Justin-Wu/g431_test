@@ -73,16 +73,30 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
-        pwm_capture[0].ccr1_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-        __HAL_TIM_SetCounter(htim, 0);
-        pwm_capture[0].frq=80000000/80/pwm_capture[0].ccr1_val;
-        HAL_TIM_IC_Start(htim, TIM_CHANNEL_1);
+        // 直接输入通道
+        if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+        {
+            pwm_capture[0].ccr1_val= HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+            pwm_capture[0].high_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+            __HAL_TIM_SetCounter(htim, 0);
+            pwm_capture[0].frq = 80000000 / 80 / (pwm_capture[0].ccr1_val+1);
+            pwm_capture[0].duty = (float)(pwm_capture[0].high_val+1)/ (pwm_capture[0].ccr1_val+1);
+            HAL_TIM_IC_Start_IT(htim, TIM_CHANNEL_1);
+            HAL_TIM_IC_Start_IT(htim, TIM_CHANNEL_2);
+        }
     }
     if (htim->Instance == TIM3)
     {
-        pwm_capture[1].ccr1_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-        __HAL_TIM_SetCounter(htim, 0);
-        pwm_capture[1].frq=80000000/80/pwm_capture[1].ccr1_val;
-        HAL_TIM_IC_Start(htim, TIM_CHANNEL_1);
+        // 直接输入通道
+        if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+        {
+            pwm_capture[1].ccr1_val= HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+            pwm_capture[1].high_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+            __HAL_TIM_SetCounter(htim, 0);
+            pwm_capture[1].frq = 80000000 / 80 / (pwm_capture[1].ccr1_val+1);
+            pwm_capture[1].duty = (float)(pwm_capture[1].high_val +1) / (pwm_capture[1].ccr1_val+1);
+            HAL_TIM_IC_Start_IT(htim, TIM_CHANNEL_1);
+            HAL_TIM_IC_Start_IT(htim, TIM_CHANNEL_2);
+        }
     }
 }
