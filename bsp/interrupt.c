@@ -1,11 +1,12 @@
 #include "interrupt.h"
 
 struct keys key[4] = {0, 0, 0, 0};
+struct pwm_capture pwm_capture[2] = {0, 0};
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 
-    if (htim->Instance == TIM3)
+    if (htim->Instance == TIM6)
     {
         // 读取四个按键的状态
         key[0].key_status = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0);
@@ -65,5 +66,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
                 break;
             }
         }
+    }
+}
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM2)
+    {
+        pwm_capture[0].ccr1_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        __HAL_TIM_SetCounter(htim, 0);
+        pwm_capture[0].frq=80000000/80/pwm_capture[0].ccr1_val;
+        HAL_TIM_IC_Start(htim, TIM_CHANNEL_1);
+    }
+    if (htim->Instance == TIM3)
+    {
+        pwm_capture[1].ccr1_val = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        __HAL_TIM_SetCounter(htim, 0);
+        pwm_capture[1].frq=80000000/80/pwm_capture[1].ccr1_val;
+        HAL_TIM_IC_Start(htim, TIM_CHANNEL_1);
     }
 }
