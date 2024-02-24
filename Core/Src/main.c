@@ -118,6 +118,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim17, TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);//∆Ù∂Ø ‰»Î≤∂ªÒ
   HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -131,6 +132,8 @@ int main(void)
 
     key_process();
     disp_process();
+    __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
+    __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
     // int8_t text[30];
 
     // sprintf(text, "   CNBR:%d    ", i_text);
@@ -307,6 +310,9 @@ void disp_process()
     LCD_DisplayStringLine(Line4, (uint8_t *)text);
     sprintf(text,"    DUTY2:%.2f%%    ", pwm_capture[1].duty*100);
     LCD_DisplayStringLine(Line5, (uint8_t *)text);
+
+    
+
   }
   else if (view_flag == 1)
   {
