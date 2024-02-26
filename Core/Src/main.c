@@ -53,6 +53,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+RTC_TimeTypeDef s_time;
+RTC_DateTypeDef s_date;
+
 uint32_t i_text = 5;
 char view_flag = 0;
 
@@ -70,6 +73,7 @@ void key_process();
 void disp_process();
 void data_tx();
 void data_rx();
+void rtc_process();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -148,6 +152,7 @@ int main(void)
 
     key_process();
     disp_process();
+    rtc_process();
     __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
     __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
 
@@ -223,6 +228,18 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void rtc_process()
+{
+  if (HAL_RTC_GetTime(&hrtc, &s_time, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_RTC_GetDate(&hrtc, &s_date, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+}
 // 串口数据发送
 void data_tx()
 {
@@ -267,7 +284,7 @@ void key_process()
   if (key[0].sigle_flag == 1)
   {
     view_flag++;
-    if(view_flag==3)
+    if(view_flag==4)
     {
       view_flag=0;
     }
@@ -314,6 +331,7 @@ void key_process()
     eeprom_write(2, frq_l);
     key[3].sigle_flag = 0;
   }
+  
   else
   {
     // 避免在其他界面按键被误触发
@@ -373,6 +391,16 @@ void disp_process()
     LCD_DisplayStringLine(Line4, (uint8_t *)text);
     sprintf(text, "    time:%s    ", car[0].time);
     LCD_DisplayStringLine(Line6, (uint8_t *)text);
+  }
+  if (view_flag == 3)
+  {
+    char text[30];
+    sprintf(text, "       RTC    ");
+    LCD_DisplayStringLine(Line0, (uint8_t *)text);
+    sprintf(text, "    %02x:%02x:%02x    ", s_time.Hours, s_time.Minutes, s_time.Seconds);
+    LCD_DisplayStringLine(Line2, (uint8_t *)text);
+    sprintf(text, "    %02x-%02x-%02x    ", s_date.Year, s_date.Month, s_date.Date);
+    LCD_DisplayStringLine(Line4, (uint8_t *)text);
   }
 }
 /* USER CODE END 4 */
