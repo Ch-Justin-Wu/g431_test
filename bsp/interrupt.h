@@ -43,7 +43,7 @@ struct pwm_capture
     
 };
 
-typedef struct car
+struct car
 {
     int8_t type[5];
     int8_t data[5];

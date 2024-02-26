@@ -293,3 +293,28 @@ void eeprom_write(uint8_t addr, uint8_t data)
   I2CWaitAck();
   I2CStop();
 }
+
+//MCP4017Êý×ÖµçÎ»Æ÷
+void mcp4017_write(uint8_t data)
+{
+  I2CStart();
+  I2CSendByte(0x5e);
+  I2CWaitAck();
+  I2CSendByte(data);
+  I2CWaitAck();
+  I2CStop();
+}
+
+uint8_t mcp4017_read()
+{
+  uint8_t data;
+
+  I2CStart();
+  I2CSendByte(0x5f);
+  I2CWaitAck();
+  
+  data = I2CReceiveByte();
+  I2CSendNotAck();
+  I2CStop();
+  return data;
+}

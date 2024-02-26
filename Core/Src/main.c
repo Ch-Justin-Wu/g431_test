@@ -385,11 +385,11 @@ void disp_process()
     char text[30];
     sprintf(text, "       Car    ");
     LCD_DisplayStringLine(Line0, (uint8_t *)text);
-    sprintf(text, "    type:%s    ", car[0].type);
+    sprintf(text, "   type:%s    ", car[0].type);
     LCD_DisplayStringLine(Line2, (uint8_t *)text);
-    sprintf(text, "    data:%s    ", car[0].data);
+    sprintf(text, "   data:%s    ", car[0].data);
     LCD_DisplayStringLine(Line4, (uint8_t *)text);
-    sprintf(text, "    time:%s    ", car[0].time);
+    sprintf(text, "   time:%s    ", car[0].time);
     LCD_DisplayStringLine(Line6, (uint8_t *)text);
   }
   if (view_flag == 3)

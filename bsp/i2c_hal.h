@@ -14,5 +14,6 @@ void I2CInit(void);
 
 uint8_t eeprom_read(uint8_t addr);
 void eeprom_write(uint8_t addr, uint8_t data);
-
+void mcp4017_write(uint8_t data);
+uint8_t mcp4017_read(void);
 #endif
