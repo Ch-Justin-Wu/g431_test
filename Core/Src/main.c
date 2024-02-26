@@ -65,19 +65,19 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void key_process();
 void disp_process();
-/* USER CODE END PFP */
+void data_tx();
+    /* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+    /* Private user code ---------------------------------------------------------*/
+    /* USER CODE BEGIN 0 */
 
+    /* USER CODE END 0 */
 
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
+    /**
+     * @brief  The application entry point.
+     * @retval int
+     */
+    int main(void)
 {
   /* USER CODE BEGIN 1 */
 
@@ -142,6 +142,7 @@ int main(void)
     __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
     __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
 
+    data_tx();
 
     //   uint8_t led_values[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     //   // 遍历led_values数组，将每一个值传入led_disp函数，每次循环延迟500ms
@@ -203,6 +204,13 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void data_tx()
+{
+  char temp[20];
+  sprintf(temp, "frq=%d\r\n", pwm_capture[0].frq);
+  HAL_UART_Transmit(&huart1, (uint8_t *)temp, sizeof(temp), 50);
+}
 // 按键 B2、B3 仅在参数显示界面有效。
 //   1) B1:定义为“界面切换”按键，切换 LCD 显示“数据界面”和参数界面。
 //  2) B2:每次按下 B2 按键，PA6 手动模式占空比参数加 10%，占空比可调整范围
