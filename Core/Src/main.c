@@ -20,6 +20,7 @@
 #include "main.h"
 #include "adc.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -29,6 +30,7 @@
 #include "stdio.h"
 #include "interrupt.h"
 #include "bsp_adc.h"
+#include "i2c_hal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -106,6 +108,7 @@ int main(void)
   MX_TIM6_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   led_disp(0x00); // led初始化
   LCD_Init();     // lcd屏幕初始化
@@ -247,6 +250,15 @@ void key_process()
       key[2].sigle_flag = 0;
     }
   }
+  if(key[3].sigle_flag == 1)
+  {
+    uint8_t frq_h=pwm_capture[0].frq>>8;
+    uint8_t frq_l=pwm_capture[0].frq&0xff;
+    eeprom_write(1,frq_h);
+    HAL_Delay(10);
+    eeprom_write(2,frq_l);
+    key[3].sigle_flag=0;
+  }
   else
   {
     // 避免在其他界面按键被误触发
@@ -284,6 +296,10 @@ void disp_process()
     LCD_DisplayStringLine(Line6, (uint8_t *)text);
     sprintf(text,"    V2:%.2fV    ", get_adc(&hadc2));
     LCD_DisplayStringLine(Line7, (uint8_t *)text);
+    //i2c eeprom
+    uint16_t eeprom_data=(eeprom_read(1)<<8)|eeprom_read(2);
+    sprintf(text,"    FRQ_eep:=%d    ", eeprom_data);
+    LCD_DisplayStringLine(Line8, (uint8_t *)text);
 
     
 
