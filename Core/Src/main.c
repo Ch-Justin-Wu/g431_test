@@ -28,6 +28,7 @@
 #include "lcd.h"
 #include "stdio.h"
 #include "interrupt.h"
+#include "bsp_adc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -137,42 +138,7 @@ int main(void)
     disp_process();
     __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
     __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
-    // int8_t text[30];
 
-    // sprintf(text, "   CNBR:%d    ", i_text);
-    // LCD_DisplayStringLine(Line9, text);
-
-    // if (key[0].sigle_flag == 1)
-    // {
-    //   sprintf(text, "   KEY0 DOWN    ");
-    //   LCD_DisplayStringLine(Line8, text);
-    //   key[0].sigle_flag = 0;
-    // }
-    // if (key[0].long_flag == 1)
-    // {
-    //   sprintf(text, "   KEY0 LONG    ");
-    //   LCD_DisplayStringLine(Line8, text);
-    //   key[0].long_flag = 0;
-    // }
-
-    // if (key[1].sigle_flag == 1)
-    // {
-    //   sprintf(text, "   KEY1 DOWN    ");
-    //   LCD_DisplayStringLine(Line8, text);
-    //   key[1].sigle_flag = 0;
-    // }
-    // if (key[2].sigle_flag == 1)
-    // {
-    //   sprintf(text, "   KEY2 DOWN    ");
-    //   LCD_DisplayStringLine(Line8, text);
-    //   key[2].sigle_flag = 0;
-    // }
-    // if (key[3].sigle_flag == 1)
-    // {
-    //   sprintf(text, "   KEY3 DOWN    ");
-    //   LCD_DisplayStringLine(Line8, text);
-    //   key[3].sigle_flag = 0;
-    // }
 
     //   uint8_t led_values[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     //   // 遍历led_values数组，将每一个值传入led_disp函数，每次循环延迟500ms
@@ -313,6 +279,11 @@ void disp_process()
     LCD_DisplayStringLine(Line4, (uint8_t *)text);
     sprintf(text,"    DUTY2:%.2f%%    ", pwm_capture[1].duty*100);
     LCD_DisplayStringLine(Line5, (uint8_t *)text);
+    //adc
+    sprintf(text,"    V1:%.2fV    ", get_adc(&hadc1));
+    LCD_DisplayStringLine(Line6, (uint8_t *)text);
+    sprintf(text,"    V2:%.2fV    ", get_adc(&hadc2));
+    LCD_DisplayStringLine(Line7, (uint8_t *)text);
 
     
 
