@@ -1,8 +1,9 @@
-#ifndef __INTERRUPT_H
+ #ifndef __INTERRUPT_H
 #define __INTERRUPT_H
 
 #include "main.h"
 #include "stdbool.h"
+#include "stdint.h"
 
 // Ã¶¾Ù°´¼üÅÐ¶Ï×´Ì¬
 // 0: °´¼üËÉ¿ª
@@ -42,7 +43,17 @@ struct pwm_capture
     
 };
 
+typedef struct car
+{
+    int8_t type[5];
+    int8_t data[5];
+    int8_t time[13];
 
+};
+
+extern int8_t rx_data[30];
+extern uint8_t rx_buffer;
+extern uint8_t rx_ptr;
 extern struct keys key[4];
 extern struct pwm_capture pwm_capture[2];
 

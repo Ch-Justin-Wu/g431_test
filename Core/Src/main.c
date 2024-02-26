@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -31,6 +32,7 @@
 #include "interrupt.h"
 #include "bsp_adc.h"
 #include "i2c_hal.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,12 +54,13 @@
 
 /* USER CODE BEGIN PV */
 uint32_t i_text = 5;
-bool view_flag = 0;
+char view_flag = 0;
 
 // pwm占空比
 uint8_t pa6_duty = 10;
 uint8_t pa7_duty = 10;
 
+struct car car[1];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,18 +69,19 @@ void SystemClock_Config(void);
 void key_process();
 void disp_process();
 void data_tx();
-    /* USER CODE END PFP */
+void data_rx();
+/* USER CODE END PFP */
 
-    /* Private user code ---------------------------------------------------------*/
-    /* USER CODE BEGIN 0 */
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 
-    /* USER CODE END 0 */
+/* USER CODE END 0 */
 
-    /**
-     * @brief  The application entry point.
-     * @retval int
-     */
-    int main(void)
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
 {
   /* USER CODE BEGIN 1 */
 
@@ -109,6 +113,7 @@ void data_tx();
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_USART1_UART_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
   led_disp(0x00); // led初始化
   LCD_Init();     // lcd屏幕初始化
@@ -120,12 +125,16 @@ void data_tx();
   // 设置LCD屏幕上的文字颜色
   LCD_SetTextColor(White);
 
+  // 使能定时器中断
   HAL_TIM_Base_Start_IT(&htim6);
-  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);//启动PWM输出
+  // 使能定时器PWM输出
+  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim17, TIM_CHANNEL_1);
-  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);//启动输入捕获
+  // 使能定时器输入捕获中断
+  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
   HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
-
+  // 使能串口接收中断
+  HAL_UART_Receive_IT(&huart1, &rx_buffer, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -142,7 +151,16 @@ void data_tx();
     __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
     __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
 
-    data_tx();
+    // data_tx();
+    if (rx_ptr != 0)
+    {
+      uint8_t temp = rx_ptr;
+      HAL_Delay(1);
+      if (temp == rx_ptr)
+      {
+        data_rx();
+      }
+    }
 
     //   uint8_t led_values[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     //   // 遍历led_values数组，将每一个值传入led_disp函数，每次循环延迟500ms
@@ -173,9 +191,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
@@ -204,13 +223,36 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+// 串口数据发送
 void data_tx()
 {
   char temp[20];
   sprintf(temp, "frq=%d\r\n", pwm_capture[0].frq);
   HAL_UART_Transmit(&huart1, (uint8_t *)temp, sizeof(temp), 50);
 }
+// 串口数据接收
+void data_rx()
+{
+  //判断接收到数据
+  if(rx_ptr>0)
+  {
+    if(rx_ptr==22)
+    {
+      sscanf(rx_data, "%4s:%4s:%12s",car[0].type, car[0].data, car[0].time);
+    }
+    else
+    {
+      //输出Error
+      char temp[20];
+      sprintf(temp, "Error\r\n");
+      HAL_UART_Transmit(&huart1, (uint8_t *)temp, sizeof(temp), 50);
+      
+    }
+    rx_ptr=0;
+    memset(rx_data, 0, sizeof(rx_data));
+  }
+}
+
 // 按键 B2、B3 仅在参数显示界面有效。
 //   1) B1:定义为“界面切换”按键，切换 LCD 显示“数据界面”和参数界面。
 //  2) B2:每次按下 B2 按键，PA6 手动模式占空比参数加 10%，占空比可调整范围
@@ -224,7 +266,12 @@ void key_process()
   // key0切换菜单
   if (key[0].sigle_flag == 1)
   {
-    view_flag = !view_flag;
+    view_flag++;
+    if(view_flag==3)
+    {
+      view_flag=0;
+    }
+    LCD_Clear(Black);
     key[0].sigle_flag = 0;
   }
 
@@ -258,14 +305,14 @@ void key_process()
       key[2].sigle_flag = 0;
     }
   }
-  if(key[3].sigle_flag == 1)
+  if (key[3].sigle_flag == 1)
   {
-    uint8_t frq_h=pwm_capture[0].frq>>8;
-    uint8_t frq_l=pwm_capture[0].frq&0xff;
-    eeprom_write(1,frq_h);
+    uint8_t frq_h = pwm_capture[0].frq >> 8;
+    uint8_t frq_l = pwm_capture[0].frq & 0xff;
+    eeprom_write(1, frq_h);
     HAL_Delay(10);
-    eeprom_write(2,frq_l);
-    key[3].sigle_flag=0;
+    eeprom_write(2, frq_l);
+    key[3].sigle_flag = 0;
   }
   else
   {
@@ -277,40 +324,32 @@ void key_process()
 
 void disp_process()
 {
-  static int last_view_flag = -1; // 初始化为一个不可能的值
-  if (last_view_flag != view_flag)
-  {
-    LCD_Clear(Black); // 清屏
-    last_view_flag = view_flag;
-  }
+ 
   if (view_flag == 0)
   {
 
     char text[30];
     sprintf(text, "       Data    ");
     LCD_DisplayStringLine(Line0, (uint8_t *)text);
-    //pwm 1
-    sprintf(text,"    FRQ1:%dHz    ", pwm_capture[0].frq);
+    // pwm 1
+    sprintf(text, "    FRQ1:%dHz    ", pwm_capture[0].frq);
     LCD_DisplayStringLine(Line2, (uint8_t *)text);
-    sprintf(text,"    DUTY1:%.2f%%    ", pwm_capture[0].duty*100);
+    sprintf(text, "    DUTY1:%.2f%%    ", pwm_capture[0].duty * 100);
     LCD_DisplayStringLine(Line3, (uint8_t *)text);
-    //pwm 2
-    sprintf(text,"    FRQ2:%dHz    ", pwm_capture[1].frq);
+    // pwm 2
+    sprintf(text, "    FRQ2:%dHz    ", pwm_capture[1].frq);
     LCD_DisplayStringLine(Line4, (uint8_t *)text);
-    sprintf(text,"    DUTY2:%.2f%%    ", pwm_capture[1].duty*100);
+    sprintf(text, "    DUTY2:%.2f%%    ", pwm_capture[1].duty * 100);
     LCD_DisplayStringLine(Line5, (uint8_t *)text);
-    //adc
-    sprintf(text,"    V1:%.2fV    ", get_adc(&hadc1));
+    // adc
+    sprintf(text, "    V1:%.2fV    ", get_adc(&hadc1));
     LCD_DisplayStringLine(Line6, (uint8_t *)text);
-    sprintf(text,"    V2:%.2fV    ", get_adc(&hadc2));
+    sprintf(text, "    V2:%.2fV    ", get_adc(&hadc2));
     LCD_DisplayStringLine(Line7, (uint8_t *)text);
-    //i2c eeprom
-    uint16_t eeprom_data=(eeprom_read(1)<<8)|eeprom_read(2);
-    sprintf(text,"    FRQ_eep:=%d    ", eeprom_data);
+    // i2c eeprom
+    uint16_t eeprom_data = (eeprom_read(1) << 8) | eeprom_read(2);
+    sprintf(text, "    FRQ_eep:=%d    ", eeprom_data);
     LCD_DisplayStringLine(Line8, (uint8_t *)text);
-
-    
-
   }
   else if (view_flag == 1)
   {
@@ -322,6 +361,18 @@ void disp_process()
     LCD_DisplayStringLine(Line2, (uint8_t *)text);
     sprintf(text, "    PA7:%d%%    ", pa7_duty);
     LCD_DisplayStringLine(Line4, (uint8_t *)text);
+  }
+  else if(view_flag == 2)
+  {
+    char text[30];
+    sprintf(text, "       Car    ");
+    LCD_DisplayStringLine(Line0, (uint8_t *)text);
+    sprintf(text, "    type:%s    ", car[0].type);
+    LCD_DisplayStringLine(Line2, (uint8_t *)text);
+    sprintf(text, "    data:%s    ", car[0].data);
+    LCD_DisplayStringLine(Line4, (uint8_t *)text);
+    sprintf(text, "    time:%s    ", car[0].time);
+    LCD_DisplayStringLine(Line6, (uint8_t *)text);
   }
 }
 /* USER CODE END 4 */

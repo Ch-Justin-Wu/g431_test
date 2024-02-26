@@ -1,4 +1,5 @@
 #include "interrupt.h"
+#include "usart.h"
 
 struct keys key[4] = {0, 0, 0, 0};
 struct pwm_capture pwm_capture[2] = {0, 0};
@@ -99,4 +100,14 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
             HAL_TIM_IC_Start_IT(htim, TIM_CHANNEL_2);
         }
     }
+}
+
+int8_t rx_data[30];
+uint8_t rx_buffer;
+uint8_t rx_ptr;
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    rx_data[rx_ptr++] = rx_buffer;
+    HAL_UART_Receive_IT(&huart1, &rx_buffer, 1);
 }
