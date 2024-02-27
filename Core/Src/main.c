@@ -313,7 +313,7 @@ void key_process()
       {
         pa6_duty = 10;
       }
-      __HAL_TIM_SET_COMPARE(&htim16, TIM_CHANNEL_1, pa6_duty);
+      
       key[1].sigle_flag = 0;
     }
     // B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
@@ -327,7 +327,7 @@ void key_process()
       {
         pa7_duty = 10;
       }
-      __HAL_TIM_SET_COMPARE(&htim17, TIM_CHANNEL_1, pa7_duty);
+      
       key[2].sigle_flag = 0;
     }
   }
@@ -384,6 +384,8 @@ void disp_process()
   else if (view_flag == 1)
   {
     adc_process();
+
+    // pwm占空比
     char text[30];
     sprintf(text, "       Para    ");
     LCD_DisplayStringLine(Line0, (uint8_t *)text);
@@ -418,6 +420,7 @@ void disp_process()
   }
   if (view_flag == 3)
   {
+    // rtc
     char text[30];
     sprintf(text, "       RTC    ");
     LCD_DisplayStringLine(Line0, (uint8_t *)text);
