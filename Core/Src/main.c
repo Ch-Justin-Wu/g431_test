@@ -58,6 +58,7 @@ RTC_DateTypeDef s_date;
 
 uint32_t i_text = 5;
 char view_flag = 0;
+uint8_t resist_val = 0;
 
 // pwm占空比
 uint8_t pa6_duty = 10;
@@ -74,6 +75,7 @@ void disp_process();
 void data_tx();
 void data_rx();
 void rtc_process();
+void adc_process();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -82,9 +84,9 @@ void rtc_process();
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -139,6 +141,8 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_1);
   // 使能串口接收中断
   HAL_UART_Receive_IT(&huart1, &rx_buffer, 1);
+
+  mcp4017_write(0x0d);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -181,22 +185,22 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+   * in the RCC_OscInitTypeDef structure.
+   */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
@@ -213,9 +217,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -228,6 +231,13 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void adc_process(void)
+{
+  adc.v_mcp = get_adc(&hadc1);
+  adc.v1 = get_adc(&hadc1);
+  adc.v2 = get_adc(&hadc2);
+}
+
 void rtc_process()
 {
   if (HAL_RTC_GetTime(&hrtc, &s_time, RTC_FORMAT_BCD) != HAL_OK)
@@ -238,7 +248,6 @@ void rtc_process()
   {
     Error_Handler();
   }
-
 }
 // 串口数据发送
 void data_tx()
@@ -250,22 +259,21 @@ void data_tx()
 // 串口数据接收
 void data_rx()
 {
-  //判断接收到数据
-  if(rx_ptr>0)
+  // 判断接收到数据
+  if (rx_ptr > 0)
   {
-    if(rx_ptr==22)
+    if (rx_ptr == 22)
     {
-      sscanf(rx_data, "%4s:%4s:%12s",car[0].type, car[0].data, car[0].time);
+      sscanf(rx_data, "%4s:%4s:%12s", car[0].type, car[0].data, car[0].time);
     }
     else
     {
-      //输出Error
+      // 输出Error
       char temp[20];
       sprintf(temp, "Error\r\n");
       HAL_UART_Transmit(&huart1, (uint8_t *)temp, sizeof(temp), 50);
-      
     }
-    rx_ptr=0;
+    rx_ptr = 0;
     memset(rx_data, 0, sizeof(rx_data));
   }
 }
@@ -284,9 +292,9 @@ void key_process()
   if (key[0].sigle_flag == 1)
   {
     view_flag++;
-    if(view_flag==4)
+    if (view_flag == 4)
     {
-      view_flag=0;
+      view_flag = 0;
     }
     LCD_Clear(Black);
     key[0].sigle_flag = 0;
@@ -294,6 +302,7 @@ void key_process()
 
   if (view_flag == 1)
   { // key1增加pa6占空比
+
     if (key[1].sigle_flag == 1)
     {
       if (pa6_duty < 90)
@@ -331,7 +340,7 @@ void key_process()
     eeprom_write(2, frq_l);
     key[3].sigle_flag = 0;
   }
-  
+
   else
   {
     // 避免在其他界面按键被误触发
@@ -342,10 +351,10 @@ void key_process()
 
 void disp_process()
 {
- 
+
   if (view_flag == 0)
   {
-
+    adc_process();
     char text[30];
     sprintf(text, "       Data    ");
     LCD_DisplayStringLine(Line0, (uint8_t *)text);
@@ -360,27 +369,42 @@ void disp_process()
     sprintf(text, "    DUTY2:%.2f%%    ", pwm_capture[1].duty * 100);
     LCD_DisplayStringLine(Line5, (uint8_t *)text);
     // adc
-    sprintf(text, "    V1:%.2fV    ", get_adc(&hadc1));
+    sprintf(text, "    V1:%.2fV    ", adc.v1);
     LCD_DisplayStringLine(Line6, (uint8_t *)text);
-    sprintf(text, "    V2:%.2fV    ", get_adc(&hadc2));
+    sprintf(text, "    V2:%.2fV    ", adc.v2);
     LCD_DisplayStringLine(Line7, (uint8_t *)text);
     // i2c eeprom
     uint16_t eeprom_data = (eeprom_read(1) << 8) | eeprom_read(2);
     sprintf(text, "    FRQ_eep:=%d    ", eeprom_data);
     LCD_DisplayStringLine(Line8, (uint8_t *)text);
+    // mcp4017
+    sprintf(text, "    MCP4017:%.2fV    ", adc.v_mcp);
+    LCD_DisplayStringLine(Line9, (uint8_t *)text);
   }
   else if (view_flag == 1)
   {
-
+    adc_process();
     char text[30];
     sprintf(text, "       Para    ");
     LCD_DisplayStringLine(Line0, (uint8_t *)text);
     sprintf(text, "    PA6:%d%%    ", pa6_duty);
     LCD_DisplayStringLine(Line2, (uint8_t *)text);
     sprintf(text, "    PA7:%d%%    ", pa7_duty);
-    LCD_DisplayStringLine(Line4, (uint8_t *)text);
+    LCD_DisplayStringLine(Line3, (uint8_t *)text);
+
+    // MCP4017 : 可编程电阻测试
+    resist_val = mcp4017_read();
+    sprintf(text, "       MCP4017    ");
+    LCD_DisplayStringLine(Line5, (uint8_t *)text);
+    sprintf(text, "   Rx=%x Rwb=%5.2f  ", resist_val, 0.7874f * resist_val);
+    LCD_DisplayStringLine(Line6, (uint8_t *)text);
+    sprintf(text, "   U=%3.3f ", 3.3 * ((0.7874f * resist_val) / (0.7874f * resist_val + 10)));
+    LCD_DisplayStringLine(Line7, (uint8_t *)text);
+    // mcp4017
+    sprintf(text, "   Real:%.2fV   ", adc.v_mcp);
+    LCD_DisplayStringLine(Line8, (uint8_t *)text);
   }
-  else if(view_flag == 2)
+  else if (view_flag == 2)
   {
     char text[30];
     sprintf(text, "       Car    ");
@@ -406,9 +430,9 @@ void disp_process()
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -420,14 +444,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
