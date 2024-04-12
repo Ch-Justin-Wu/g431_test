@@ -264,7 +264,7 @@ void I2CInit(void)
 // ¶Á
 uint8_t eeprom_read(uint8_t addr)
 {
-  uint8_t data;
+  uint8_t data=0;
   I2CStart();
   I2CSendByte(0xa0);
   I2CWaitAck();
@@ -315,6 +315,39 @@ uint8_t mcp4017_read()
   
   data = I2CReceiveByte();
   I2CSendNotAck();
+  I2CStop();
+  return data;
+}
+
+
+
+void my_e2prom_write(uint8_t addr ,uint8_t data)
+{
+  I2CStart();
+  I2CSendByte(0xa0);
+  I2CWaitAck();
+  I2CSendByte(addr);
+  I2CWaitAck();
+  I2CSendByte(data);
+  I2CWaitAck();
+  I2CStop();
+}
+
+uint8_t my_e2prom_read(uint8_t addr)
+{
+  uint8_t data = 0;
+  I2CStart();
+  I2CSendByte(0xa0);
+  I2CWaitAck();
+  I2CSendByte(addr);
+  I2CWaitAck();
+  I2CStop();
+
+  I2CStart();
+  I2CSendByte(0xa1);
+  I2CWaitAck();
+  data = I2CReceiveByte();
+  I2CWaitAck();
   I2CStop();
   return data;
 }

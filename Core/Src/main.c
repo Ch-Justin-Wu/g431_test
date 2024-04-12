@@ -121,6 +121,10 @@ int main(void)
   MX_USART1_UART_Init();
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+  HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
+
   led_disp(0x00); // led初始化
   LCD_Init();     // lcd屏幕初始化
 
@@ -297,55 +301,56 @@ void key_process()
       view_flag = 0;
     }
     LCD_Clear(Black);
+    // __HAL_TIM_SET_AUTORELOAD(&htim6, 500-1);//period
+    // __HAL_TIM_SET_COMPARE(&htim6, TIM_CHANNEL_1, 50);//pulse
     key[0].sigle_flag = 0;
   }
 
-  if (view_flag == 1)
   { // key1增加pa6占空比
-
     if (key[1].sigle_flag == 1)
     {
-      if (pa6_duty < 90)
+      if (view_flag == 1)
       {
-        pa6_duty += 10;
+        if (pa6_duty < 90)
+        {
+          pa6_duty += 10;
+        }
+        else
+        {
+          pa6_duty = 10;
+        }
       }
-      else
-      {
-        pa6_duty = 10;
-      }
-      
       key[1].sigle_flag = 0;
     }
     // B3:每次按下 B3 按键，PA7 手动模式占空比参数加 10%，占空比可调整范围
     if (key[2].sigle_flag == 1)
     {
-      if (pa7_duty < 90)
+      if (view_flag == 1)
       {
-        pa7_duty += 10;
+        if (pa7_duty < 90)
+        {
+          pa7_duty += 10;
+        }
+        else
+        {
+          pa7_duty = 10;
+        }
       }
-      else
-      {
-        pa7_duty = 10;
-      }
-      
       key[2].sigle_flag = 0;
     }
   }
+
   if (key[3].sigle_flag == 1)
   {
-    uint8_t frq_h = pwm_capture[0].frq >> 8;
-    uint8_t frq_l = pwm_capture[0].frq & 0xff;
-    eeprom_write(1, frq_h);
-    HAL_Delay(10);
-    eeprom_write(2, frq_l);
+    if (view_flag == 0)
+    {
+      uint8_t frq_h = pwm_capture[0].frq >> 8;
+      uint8_t frq_l = pwm_capture[0].frq & 0xff;
+      eeprom_write(1, frq_h);
+      HAL_Delay(10);
+      eeprom_write(2, frq_l);
+    }
     key[3].sigle_flag = 0;
-  }
-
-  else
-  {
-    // 避免在其他界面按键被误触发
-    key[1].sigle_flag = 0;
-    key[2].sigle_flag = 0;
   }
 }
 
